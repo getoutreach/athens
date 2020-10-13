@@ -1,8 +1,10 @@
 package download
 
 import (
+	"bytes"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/gomods/athens/pkg/download/mode"
 	"github.com/gomods/athens/pkg/errors"
@@ -42,8 +44,15 @@ func ZipHandler(dp Protocol, lggr log.Entry, df *mode.DownloadFile) http.Handler
 		}
 		defer zip.Close()
 
+		lenBuf := new(bytes.Buffer)
+		_, err = io.Copy(lenBuf, zip)
+		if err != nil {
+			lggr.SystemErr(errors.E(op, errors.M(mod), errors.V(ver), err))
+		}
+
 		w.Header().Set("Content-Type", "application/zip")
-		_, err = io.Copy(w, zip)
+		w.Header().Set("Content-Length", strconv.Itoa(lenBuf.Len()))
+		_, err = io.Copy(w, lenBuf)
 		if err != nil {
 			lggr.SystemErr(errors.E(op, errors.M(mod), errors.V(ver), err))
 		}
